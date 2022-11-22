@@ -32,6 +32,8 @@ use std::{
     path::PathBuf,
 };
 
+slint::include_modules!();
+
 #[cfg(windows)]
 const DEFAULT_EXPORT_FILE: &str = "export-esp.ps1";
 #[cfg(not(windows))]
@@ -55,6 +57,8 @@ struct Cli {
 pub enum SubCommand {
     /// Installs esp-rs environment
     Install(Box<InstallOpts>),
+    /// GUI
+    Gui,
     /// Uninstalls esp-rs environment
     Uninstall(UninstallOpts),
     /// Updates Xtensa Rust toolchain
@@ -243,6 +247,183 @@ fn install(args: InstallOpts) -> Result<()> {
     Ok(())
 }
 
+fn gui() -> Result<()> {
+    let app = App::new();
+    let host_triple = get_host_triple(None)?;
+    let latest_xtensa_rust = XtensaRust::get_latest_version()?;
+    // Set defaults
+    app.global::<Args>()
+        .set_xtensa_rust_version(latest_xtensa_rust.into());
+    app.global::<Args>()
+        .set_default_host(host_triple.to_string().into());
+    app.global::<Args>()
+        .set_export_file(DEFAULT_EXPORT_FILE.into());
+
+    if Config::get_config_path().unwrap().exists() {
+        app.global::<Args>().set_uninstall_enable(true);
+        app.global::<Args>().set_button("Update".into());
+        let config = Config::load()?;
+        if let Some(xtensa_rust) = config.xtensa_rust {
+            app.global::<Args>()
+                .set_xtensa_rust_version(xtensa_rust.version.into());
+        }
+        app.global::<Args>()
+            .set_default_host(config.host_triple.to_string().into());
+        app.global::<Args>()
+            .set_nightly_version(config.nightly_version.into());
+        if let Some(export_file) = config.export_file {
+            app.global::<Args>()
+                .set_export_file(export_file.display().to_string().into());
+        }
+        if let Some(esp_idf_version) = config.esp_idf_version {
+            app.global::<Args>()
+                .set_esp_idf_version(esp_idf_version.into());
+        }
+        if !config.targets.contains(&Target::ESP32) {
+            app.global::<Args>().set_esp32_value(false);
+        }
+        if !config.targets.contains(&Target::ESP32S2) {
+            app.global::<Args>().set_esp32s2_value(false);
+        }
+        if !config.targets.contains(&Target::ESP32S3) {
+            app.global::<Args>().set_esp32s3_value(false);
+        }
+        if !config.targets.contains(&Target::ESP32C3) {
+            app.global::<Args>().set_esp32c3_value(false);
+        }
+        if !config.targets.contains(&Target::ESP32C2) {
+            app.global::<Args>().set_esp32c2_value(false);
+        }
+        if let Some(extra_crates) = config.extra_crates {
+            if extra_crates.contains("espflash") {
+                app.global::<Args>().set_espflash_value(true);
+            }
+            if extra_crates.contains("cargo-espflash") {
+                app.global::<Args>().set_cargo_espflash_value(true);
+            }
+            if extra_crates.contains("cargo-generate") {
+                app.global::<Args>().set_cargo_generate_value(true);
+            }
+            if extra_crates.contains("ldproxy") {
+                app.global::<Args>().set_ldproxy_value(true);
+            }
+            if extra_crates.contains("sccache") {
+                app.global::<Args>().set_sccache_value(true);
+            }
+        }
+        app.global::<Args>().set_install_mode(false);
+    }
+
+    // Install/Update callback
+    app.global::<Args>().on_install({
+        let ui_handle = app.as_weak();
+        move || {
+            let ui = ui_handle.unwrap();
+            let mut selected_crates: HashSet<Crate> = HashSet::new();
+            let mut targets: HashSet<Target> = HashSet::new();
+            // Get targets
+            if ui.global::<Args>().get_esp32_value() {
+                targets.insert(Target::ESP32);
+            }
+            if ui.global::<Args>().get_esp32s2_value() {
+                targets.insert(Target::ESP32S2);
+            }
+            if ui.global::<Args>().get_esp32s3_value() {
+                targets.insert(Target::ESP32S3);
+            }
+            if ui.global::<Args>().get_esp32c2_value() {
+                targets.insert(Target::ESP32C2);
+            }
+            if ui.global::<Args>().get_esp32c3_value() {
+                targets.insert(Target::ESP32C3);
+            }
+            // Get extra crates
+            if ui.global::<Args>().get_espflash_value() {
+                selected_crates.insert(Crate::new("espflash"));
+            }
+            if ui.global::<Args>().get_cargo_espflash_value() {
+                selected_crates.insert(Crate::new("cargo-espflash"));
+            }
+            if ui.global::<Args>().get_cargo_generate_value() {
+                selected_crates.insert(Crate::new("cargo-generate"));
+            }
+            if ui.global::<Args>().get_ldproxy_value() {
+                selected_crates.insert(Crate::new("ldproxy"));
+            }
+            if ui.global::<Args>().get_sccache_value() {
+                selected_crates.insert(Crate::new("sccache"));
+            }
+            let extra_crates = if selected_crates.is_empty() {
+                None
+            } else {
+                Some(selected_crates)
+            };
+            // Host triple
+            let host_triple = ui.global::<Args>().get_default_host();
+            // Log Level
+            let log_level = ui.global::<Args>().get_log_level().to_string();
+            // Export file
+            let export_file = ui.global::<Args>().get_export_file();
+            let export_file = Some(PathBuf::from(export_file.as_str()));
+            // ESP-IDF version
+            let esp_idf_version = if (ui.global::<Args>().get_esp_idf_version()) == "none" {
+                None
+            } else {
+                Some(ui.global::<Args>().get_esp_idf_version().to_string())
+            };
+            // Xtensa Rust Toolhain version
+            let xtensa_rust_version = ui.global::<Args>().get_xtensa_rust_version().to_string();
+            // Nightly Rust Toolhain version
+            let nightly_version = ui.global::<Args>().get_nightly_version().to_string();
+            let profile_minimal = ui.global::<Args>().get_profile_minimal();
+            if ui.global::<Args>().get_button() == "Install" {
+                let opts = InstallOpts {
+                    default_host: Some(host_triple.into()),
+                    esp_idf_version,
+                    export_file,
+                    extra_crates,
+                    llvm_version: "15".into(),
+                    log_level,
+                    nightly_version,
+                    profile_minimal,
+                    targets: targets.clone(),
+                    toolchain_version: Some(xtensa_rust_version),
+                };
+                if install(opts).is_err() {
+                    panic!("Installation failed");
+                }
+            } else {
+                let opts = UpdateOpts {
+                    default_host: Some(host_triple.into()),
+                    log_level,
+                    toolchain_version: Some(xtensa_rust_version),
+                };
+                if update(opts).is_err() {
+                    panic!("Update failed");
+                };
+            }
+        }
+    });
+    // Uninstall callback
+    app.global::<Args>().on_uninstall({
+        let ui_handle = app.as_weak();
+        move || {
+            let ui = ui_handle.unwrap();
+
+            // Log Level
+            let log_level = ui.global::<Args>().get_log_level().to_string();
+
+            let opts = UninstallOpts { log_level };
+            println!("Uninstall options: {:#?}", opts);
+            if uninstall(opts).is_err() {
+                panic!("Uninstall failed");
+            };
+        }
+    });
+    app.run();
+    Ok(())
+}
+
 /// Uninstalls the Rust for ESP chips environment
 fn uninstall(args: UninstallOpts) -> Result<()> {
     initialize_logger(&args.log_level);
@@ -381,6 +562,7 @@ fn update(args: UpdateOpts) -> Result<()> {
 fn main() -> Result<()> {
     match Cli::parse().subcommand {
         SubCommand::Install(args) => install(*args),
+        SubCommand::Gui => gui(),
         SubCommand::Update(args) => update(args),
         SubCommand::Uninstall(args) => uninstall(args),
     }
