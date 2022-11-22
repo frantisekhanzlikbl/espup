@@ -252,13 +252,14 @@ fn gui() -> Result<()> {
     let app = App::new();
     let host_triple = get_host_triple(None)?;
     let latest_xtensa_rust = XtensaRust::get_latest_version()?;
+    let export_file = get_export_file(None)?;
     // Set defaults
     app.global::<Args>()
         .set_xtensa_rust_version(latest_xtensa_rust.into());
     app.global::<Args>()
         .set_default_host(host_triple.to_string().into());
     app.global::<Args>()
-        .set_export_file(DEFAULT_EXPORT_FILE.into());
+        .set_export_file(export_file.display().to_string().into());
 
     if Config::get_config_path().unwrap().exists() {
         app.global::<Args>().set_uninstall_enable(true);
