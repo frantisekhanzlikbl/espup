@@ -57,7 +57,7 @@ struct Cli {
 pub enum SubCommand {
     /// Installs esp-rs environment
     Install(Box<InstallOpts>),
-    /// GUI
+    /// GUI to install/update/uninstall the Rust for ESP chips environment
     Gui,
     /// Uninstalls esp-rs environment
     Uninstall(UninstallOpts),
@@ -247,6 +247,7 @@ fn install(args: InstallOpts) -> Result<()> {
     Ok(())
 }
 
+/// GUI to install/update/uninstall the Rust for ESP chips environment
 fn gui() -> Result<()> {
     let app = App::new();
     let host_triple = get_host_triple(None)?;
