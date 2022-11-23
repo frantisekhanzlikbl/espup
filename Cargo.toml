@@ -38,14 +38,14 @@ regex = "1.7.0"
 serde_json = "1.0.87"
 thiserror = "1.0.37"
 update-informer = "0.5.0"
-slint = "0.3"
+slint = { version = "0.3", optional = true }
 
 [dev-dependencies]
 assert_fs = "1.0.9"
 assert_cmd = "2.0.6"
 
 [build-dependencies]
-slint-build = "0.3"
+slint-build = { version = "0.3", optional = true }
 
 
 [target.aarch64-unknown-linux-gnu.dependencies]
@@ -53,6 +53,10 @@ openssl = { version = "0.10", features = ["vendored"] }
 
 [target.x86_64-unknown-linux-gnu.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
+
+[features]
+gui = ["dep:slint", "dep:slint-build"]
+
 
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.{ archive-format }"

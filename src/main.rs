@@ -32,6 +32,7 @@ use std::{
     path::PathBuf,
 };
 
+#[cfg(feature = "gui")]
 slint::include_modules!();
 
 #[cfg(windows)]
@@ -57,6 +58,7 @@ struct Cli {
 pub enum SubCommand {
     /// Installs esp-rs environment
     Install(Box<InstallOpts>),
+    #[cfg(feature = "gui")]
     /// GUI to install/update/uninstall the Rust for ESP chips environment
     Gui,
     /// Uninstalls esp-rs environment
@@ -247,6 +249,7 @@ fn install(args: InstallOpts) -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "gui")]
 /// GUI to install/update/uninstall the Rust for ESP chips environment
 fn gui() -> Result<()> {
     let app = App::new();
@@ -564,6 +567,7 @@ fn update(args: UpdateOpts) -> Result<()> {
 fn main() -> Result<()> {
     match Cli::parse().subcommand {
         SubCommand::Install(args) => install(*args),
+        #[cfg(feature = "gui")]
         SubCommand::Gui => gui(),
         SubCommand::Update(args) => update(args),
         SubCommand::Uninstall(args) => uninstall(args),
