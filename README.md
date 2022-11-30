@@ -125,9 +125,20 @@ Usage: espup <COMMAND>
 
 Commands:
   install    Installs esp-rs environment
+  gui        GUI to install/update/uninstall the Rust for ESP chips environment
   uninstall  Uninstalls esp-rs environment
   update     Updates Xtensa Rust toolchain
   help       Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help     Print help information
+  -V, --version  Print version information
+```
+
+### GUI Subcommand
+
+```
+Usage: espup gui
 
 Options:
   -h, --help     Print help information
