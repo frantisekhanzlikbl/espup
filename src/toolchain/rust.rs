@@ -102,13 +102,12 @@ impl XtensaRust {
             )?;
 
             info!("{} Installing rust esp toolchain", emoji::WRENCH);
-            let arguments = format!(
-                "{}/rust-nightly-{}/install.sh --destdir={} --prefix='' --without=rust-docs",
+            let command = format!(
+                "{}/rust-nightly-{}/install.sh",
                 get_dist_path("rust"),
                 &self.host_triple,
-                self.toolchain_destination.display()
             );
-            cmd!("/bin/bash", "-c", arguments).run()?;
+            cmd!(command, "--destdir", self.toolchain_destination.display(), "--prefix=''", "--without=rust-docs").run()?;
 
             download_file(
                 self.src_dist_url.clone(),
@@ -117,12 +116,11 @@ impl XtensaRust {
                 true,
             )?;
             info!("{} Installing rust-src for esp toolchain", emoji::WRENCH);
-            let arguments = format!(
-                "{}/rust-src-nightly/install.sh --destdir={} --prefix='' --without=rust-docs",
+            let command = format!(
+                "{}/rust-src-nightly/install.sh",
                 get_dist_path("rust-src"),
-                self.toolchain_destination.display()
             );
-            cmd!("/bin/bash", "-c", arguments).run()?;
+            cmd!(command, "--destdir", self.toolchain_destination.display(), "--prefix=''", "--without=rust-docs").run()?;
         }
         // Some platfroms like Windows are available in single bundle rust + src, because install
         // script in dist is not available for the plaform. It's sufficient to extract the toolchain
@@ -333,7 +331,6 @@ fn install_rustup(nightly_version: &str, host_triple: &HostTriple) -> Result<(),
     .run()?;
     #[cfg(not(windows))]
     cmd!(
-        "/bin/bash",
         rustup_init_path,
         "--default-toolchain",
         nightly_version,
